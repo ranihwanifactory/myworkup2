@@ -1204,7 +1204,7 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
   const sortedLogs = useMemo(() => [...workLogs].sort((a, b) => b.date.localeCompare(a.date)), [workLogs]);
 
   return (
-    <div className="bg-white rounded-3xl border border-black/5 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="bg-white rounded-3xl border border-black/5 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 logs-table-print-container">
       <div className="p-4 md:p-6 border-b border-black/5 flex items-center justify-between print:hidden">
         <h3 className="font-bold text-lg">전체 업무 일지</h3>
         <button 

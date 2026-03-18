@@ -27,7 +27,7 @@
 
 @media print {
   @page {
-    size: A4 landscape;
+    size: A4 portrait;
     margin: 1cm;
   }
 
@@ -69,7 +69,7 @@
     padding-left: 0 !important;
   }
   
-  .lg\:col-span-8 {
+  .lg\:col-span-8, .logs-table-print-container {
     width: 100% !important;
     max-width: none !important;
     display: block !important;
@@ -84,7 +84,7 @@
   }
 
   /* Force visibility for calendar elements */
-  .lg\:col-span-8, .lg\:col-span-8 * {
+  .lg\:col-span-8, .lg\:col-span-8 *, .logs-table-print-container, .logs-table-print-container * {
     visibility: visible !important;
     opacity: 1 !important;
   }
@@ -131,19 +131,30 @@
   }
   .print-table th, .print-table td {
     border: 1px solid #e2e8f0 !important;
-    padding: 8px !important;
-    font-size: 9pt !important;
+    padding: 12px 8px !important;
+    font-size: 10pt !important;
   }
   .print-table th {
     background-color: #f8fafc !important;
     -webkit-print-color-adjust: exact !important;
   }
 
-  /* Adjust calendar grid for landscape to fill page vertically */
+  /* Adjust calendar grid for portrait to fill page vertically */
   .lg\:col-span-8 {
-    height: 185mm !important; /* Fill A4 landscape height (210mm - 20mm margins) */
+    height: 270mm !important; /* Fill A4 portrait height (297mm - 20mm margins) */
     display: flex !important;
     flex-direction: column !important;
+  }
+
+  /* Adjust logs table to fill page vertically if it's the main content */
+  .logs-table-print-container {
+    min-height: 270mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  .logs-table-print-container table {
+    flex-grow: 1 !important;
   }
 
   .lg\:col-span-8 > div:first-child {
