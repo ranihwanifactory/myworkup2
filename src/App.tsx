@@ -1292,7 +1292,7 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
       </div>
 
       {/* Mobile Card View */}
-      <div className="md:hidden divide-y divide-black/5">
+      <div className="md:hidden divide-y divide-black/5 print:hidden">
         {sortedLogs.map(log => (
           <div key={log.id} className="p-4 space-y-3">
             <div className="flex justify-between items-start">
