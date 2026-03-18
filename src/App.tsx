@@ -26,7 +26,8 @@ import {
   Printer,
   Eraser,
   Lock,
-  LogIn
+  LogIn,
+  Search
 } from 'lucide-react';
 import { 
   format, 
@@ -113,6 +114,8 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingLog, setEditingLog] = useState<WorkLog | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Load data
   useEffect(() => {
@@ -148,6 +151,15 @@ export default function App() {
     setIsFormOpen(false);
   };
 
+  const handleNavigateToLog = (log: WorkLog) => {
+    const logDate = parseISO(log.date);
+    setCurrentDate(logDate);
+    setSelectedDate(logDate);
+    setActiveTab('calendar');
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
   const handleDeleteLog = (id: string) => {
     if (confirm('정말 삭제하시겠습니까?')) {
       setWorkLogs(prev => prev.filter(log => log.id !== id));
@@ -172,6 +184,17 @@ export default function App() {
       totalAmount: monthLogs.reduce((sum, log) => sum + log.totalAmount, 0),
     };
   }, [workLogs, currentDate]);
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return workLogs.filter(log => 
+      log.workType.toLowerCase().includes(query) ||
+      log.workerNames.toLowerCase().includes(query) ||
+      log.notes.toLowerCase().includes(query) ||
+      log.date.includes(query)
+    ).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+  }, [workLogs, searchQuery]);
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
@@ -208,6 +231,59 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-3">
+            <div className="relative hidden md:block">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <Search size={18} />
+              </div>
+              <input 
+                type="text"
+                placeholder="일정 검색 (현장명, 인원 등)"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setIsSearchOpen(true);
+                }}
+                onFocus={() => setIsSearchOpen(true)}
+                className="pl-10 pr-4 py-2.5 bg-white border border-black/5 rounded-xl text-sm w-64 focus:w-80 transition-all outline-none shadow-sm"
+              />
+              
+              <AnimatePresence>
+                {isSearchOpen && searchQuery.trim() && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl border border-black/5 shadow-xl z-[60] overflow-hidden"
+                  >
+                    <div className="p-2 max-h-96 overflow-y-auto custom-scrollbar">
+                      {searchResults.length > 0 ? (
+                        searchResults.map(log => (
+                          <button
+                            key={log.id}
+                            onClick={() => handleNavigateToLog(log)}
+                            className="w-full text-left p-3 hover:bg-slate-50 rounded-xl transition-colors flex flex-col gap-1 border-b border-slate-50 last:border-0"
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] font-bold text-slate-400">{log.date}</span>
+                              <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded border", getWorkTypeColor(log.workType))}>
+                                {log.workType}
+                              </span>
+                            </div>
+                            <p className="text-sm font-bold truncate">{log.workType} 현장</p>
+                            <p className="text-[10px] text-slate-500 truncate">{log.workerNames || '인원 정보 없음'}</p>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-8 text-center text-slate-400 text-sm">
+                          검색 결과가 없습니다.
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <button 
               onClick={() => {
                 setEditingLog(null);
@@ -321,6 +397,14 @@ export default function App() {
           {activeTab === 'settings' && <SettingsView workLogs={workLogs} setWorkLogs={setWorkLogs} />}
         </div>
       </main>
+
+      {/* Global Search Overlay for closing */}
+      {isSearchOpen && (
+        <div 
+          className="fixed inset-0 z-[55]" 
+          onClick={() => setIsSearchOpen(false)}
+        />
+      )}
 
       {/* Modals */}
       <AnimatePresence>
