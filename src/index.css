@@ -40,10 +40,10 @@
   }
 
   body {
-    margin: 1.5cm !important; /* Content margin from paper edge */
+    margin: 1cm !important;
   }
   
-  nav, header, footer, .print-hidden, button, .pb-24, .lg\:col-span-4 {
+  nav, aside, header, footer, .print-hidden, button, .pb-24, .lg\:col-span-4 {
     display: none !important;
   }
   
@@ -53,10 +53,11 @@
     width: 100% !important;
     display: block !important;
     position: static !important;
+    padding-left: 0 !important;
   }
 
   /* Reset layout for print */
-  .md\:pl-20 {
+  .md\:pl-20, .md\:pl-64 {
     padding-left: 0 !important;
   }
   
@@ -68,6 +69,20 @@
     box-shadow: none !important;
     overflow: visible !important;
     float: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Force visibility for calendar elements */
+  .lg\:col-span-8, .lg\:col-span-8 * {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: block !important;
+  }
+
+  /* Re-enable grid for the actual calendar grid */
+  .lg\:col-span-8 .grid {
+    display: grid !important;
   }
   
   .bg-white {
@@ -85,11 +100,6 @@
     border: none !important;
     width: 100% !important;
     max-width: none !important;
-  }
-
-  /* Ensure grid displays correctly in print */
-  .grid {
-    display: grid !important;
   }
 
   /* Force background colors to show in print */
