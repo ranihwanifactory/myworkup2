@@ -145,6 +145,7 @@ export default function App() {
   const handleUpdateLog = (id: string, updatedFields: Partial<WorkLog>) => {
     setWorkLogs(prev => prev.map(log => log.id === id ? { ...log, ...updatedFields } : log));
     setEditingLog(null);
+    setIsFormOpen(false);
   };
 
   const handleDeleteLog = (id: string) => {
@@ -306,7 +307,16 @@ export default function App() {
           )}
 
           {activeTab === 'dashboard' && <Dashboard workLogs={workLogs} stats={stats} />}
-          {activeTab === 'logs' && <LogsTable workLogs={workLogs} onEdit={setEditingLog} onDelete={handleDeleteLog} />}
+          {activeTab === 'logs' && (
+            <LogsTable 
+              workLogs={workLogs} 
+              onEdit={(log) => {
+                setEditingLog(log);
+                setIsFormOpen(true);
+              }} 
+              onDelete={handleDeleteLog} 
+            />
+          )}
           {activeTab === 'certificate' && <CertificateView workLogs={workLogs} />}
           {activeTab === 'settings' && <SettingsView workLogs={workLogs} setWorkLogs={setWorkLogs} />}
         </div>
