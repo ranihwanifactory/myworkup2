@@ -50,7 +50,7 @@ import {
   subYears
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { 
@@ -1449,7 +1449,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                   transition={{ duration: 0.4 }}
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   placeholder="비밀번호 입력"
                   className={cn(
                     "w-full bg-slate-50 border-2 px-6 py-5 rounded-2xl outline-none transition-all text-xl font-bold tracking-widest text-center",
