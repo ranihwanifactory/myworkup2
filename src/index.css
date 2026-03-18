@@ -27,8 +27,8 @@
 
 @media print {
   @page {
-    margin: 0;
-    size: auto;
+    size: A4 landscape;
+    margin: 1cm;
   }
 
   html, body {
@@ -37,10 +37,11 @@
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
   }
 
   body {
-    margin: 1.5cm !important; /* Content margin from paper edge, hides browser headers/footers */
+    margin: 0 !important;
   }
   
   /* CRITICAL: Removed .pb-24 from here as it was hiding the main element */
@@ -115,5 +116,10 @@
   /* Specific fixes for calendar cells */
   .border-r, .border-b {
     border-color: #e2e8f0 !important; /* slate-200 */
+  }
+
+  /* Adjust calendar grid for landscape */
+  .min-h-\[80px\], .md\:min-h-\[120px\] {
+    min-height: 12vh !important; /* Scale height to fit landscape page better */
   }
 }
