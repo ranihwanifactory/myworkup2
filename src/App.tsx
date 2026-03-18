@@ -252,6 +252,26 @@ function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchStartDate, setSearchStartDate] = useState('');
   const [searchEndDate, setSearchEndDate] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importingProgress, setImportingProgress] = useState(0);
+  const [importElapsedTime, setImportElapsedTime] = useState(0);
+  const importTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Import timer logic
+  useEffect(() => {
+    if (isImporting) {
+      const start = Date.now();
+      importTimerRef.current = setInterval(() => {
+        setImportElapsedTime((Date.now() - start) / 1000);
+      }, 100);
+    } else {
+      if (importTimerRef.current) clearInterval(importTimerRef.current);
+      setImportElapsedTime(0);
+    }
+    return () => {
+      if (importTimerRef.current) clearInterval(importTimerRef.current);
+    };
+  }, [isImporting]);
 
   // Auth state listener
   useEffect(() => {
@@ -626,9 +646,23 @@ function AppContent() {
             />
           )}
           {activeTab === 'certificate' && <CertificateView workLogs={workLogs} />}
-          {activeTab === 'settings' && <SettingsView workLogs={workLogs} setWorkLogs={setWorkLogs} user={user} />}
+          {activeTab === 'settings' && (
+            <SettingsView 
+              workLogs={workLogs} 
+              setWorkLogs={setWorkLogs} 
+              user={user} 
+              setIsImporting={setIsImporting}
+              setImportingProgress={setImportingProgress}
+            />
+          )}
         </div>
       </main>
+
+      <LoadingOverlay 
+        isImporting={isImporting} 
+        progress={importingProgress} 
+        elapsedTime={importElapsedTime} 
+      />
 
       {/* Global Search Overlay for closing */}
       {isSearchOpen && (
@@ -677,6 +711,41 @@ function NavItem({ icon, active, onClick, label }: { icon: React.ReactNode, acti
       <span className="text-[10px] md:text-sm font-medium md:hidden lg:block">{label}</span>
       {active && <motion.div layoutId="activeNav" className="hidden md:block absolute left-0 w-1 h-6 bg-black rounded-r-full" />}
     </button>
+  );
+}
+
+function LoadingOverlay({ progress, elapsedTime, isImporting }: { progress: number, elapsedTime: number, isImporting: boolean }) {
+  if (!isImporting) return null;
+  
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl text-center"
+      >
+        <div className="mb-6">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Upload size={32} className="animate-bounce" />
+          </div>
+          <h3 className="text-xl font-bold">데이터 가져오는 중...</h3>
+          <p className="text-slate-500 text-sm mt-1">잠시만 기다려 주세요. 소요 시간: {elapsedTime.toFixed(1)}초</p>
+        </div>
+        
+        <div className="relative h-4 bg-slate-100 rounded-full overflow-hidden mb-2">
+          <motion.div 
+            className="absolute inset-y-0 left-0 bg-blue-600"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ type: 'spring', bounce: 0, duration: 0.5 }}
+          />
+        </div>
+        <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+          <span>진행률</span>
+          <span>{progress.toFixed(0)}%</span>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -1675,7 +1744,19 @@ const SignatureBox: React.FC<SignatureBoxProps> = ({ label }) => {
   );
 }
 
-function SettingsView({ workLogs, setWorkLogs, user }: { workLogs: WorkLog[], setWorkLogs: (logs: WorkLog[]) => void, user: User | null }) {
+function SettingsView({ 
+  workLogs, 
+  setWorkLogs, 
+  user,
+  setIsImporting,
+  setImportingProgress
+}: { 
+  workLogs: WorkLog[], 
+  setWorkLogs: (logs: WorkLog[]) => void, 
+  user: User | null,
+  setIsImporting: (val: boolean) => void,
+  setImportingProgress: (val: number) => void
+}) {
   const handleExport = () => {
     const data = JSON.stringify({ workLogs, version: '2.0', exportDate: new Date().toISOString() }, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
@@ -1695,24 +1776,45 @@ function SettingsView({ workLogs, setWorkLogs, user }: { workLogs: WorkLog[], se
         const data = JSON.parse(event.target?.result as string);
         if (data.workLogs && Array.isArray(data.workLogs)) {
           if (confirm(`${data.workLogs.length}개의 데이터를 불러오시겠습니까? Firestore에 저장됩니다.`)) {
-            const batch = writeBatch(db);
-            data.workLogs.forEach((log: any) => {
-              const newDocRef = doc(collection(db, 'workLogs'));
-              const { id, ...rest } = log;
-              batch.set(newDocRef, {
-                ...rest,
-                userId: user.uid,
-                createdAt: log.createdAt || new Date().toISOString()
+            setIsImporting(true);
+            setImportingProgress(0);
+            
+            const total = data.workLogs.length;
+            const batchSize = 100; // Smaller batches for better progress reporting
+            const logs = data.workLogs;
+            
+            for (let i = 0; i < total; i += batchSize) {
+              const batch = writeBatch(db);
+              const chunk = logs.slice(i, i + batchSize);
+              
+              chunk.forEach((log: any) => {
+                const newDocRef = doc(collection(db, 'workLogs'));
+                const { id, ...rest } = log;
+                batch.set(newDocRef, {
+                  ...rest,
+                  userId: user.uid,
+                  createdAt: log.createdAt || new Date().toISOString()
+                });
               });
-            });
-            await batch.commit();
+              
+              await batch.commit();
+              setImportingProgress(Math.min(100, ((i + chunk.length) / total) * 100));
+              // Small delay to allow UI to update and show progress
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            
+            setIsImporting(false);
+            alert('데이터를 성공적으로 가져왔습니다.');
           }
         }
       } catch (err) {
+        setIsImporting(false);
         alert('올바른 JSON 파일이 아닙니다.');
       }
     };
     reader.readAsText(file);
+    // Reset input value to allow importing the same file again
+    e.target.value = '';
   };
 
   const handleLogout = async () => {
