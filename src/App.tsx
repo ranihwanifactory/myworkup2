@@ -116,6 +116,8 @@ export default function App() {
   const [editingLog, setEditingLog] = useState<WorkLog | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchStartDate, setSearchStartDate] = useState('');
+  const [searchEndDate, setSearchEndDate] = useState('');
 
   // Load data
   useEffect(() => {
@@ -158,6 +160,8 @@ export default function App() {
     setActiveTab('calendar');
     setIsSearchOpen(false);
     setSearchQuery('');
+    setSearchStartDate('');
+    setSearchEndDate('');
   };
 
   const handleDeleteLog = (id: string) => {
@@ -186,15 +190,22 @@ export default function App() {
   }, [workLogs, currentDate]);
 
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    if (!searchQuery.trim() && !searchStartDate && !searchEndDate) return [];
     const query = searchQuery.toLowerCase();
-    return workLogs.filter(log => 
-      log.workType.toLowerCase().includes(query) ||
-      log.workerNames.toLowerCase().includes(query) ||
-      log.notes.toLowerCase().includes(query) ||
-      log.date.includes(query)
-    ).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
-  }, [workLogs, searchQuery]);
+    return workLogs.filter(log => {
+      const matchesQuery = !query || (
+        log.workType.toLowerCase().includes(query) ||
+        log.workerNames.toLowerCase().includes(query) ||
+        log.notes.toLowerCase().includes(query) ||
+        log.date.includes(query)
+      );
+      
+      const matchesStartDate = !searchStartDate || log.date >= searchStartDate;
+      const matchesEndDate = !searchEndDate || log.date <= searchEndDate;
+      
+      return matchesQuery && matchesStartDate && matchesEndDate;
+    }).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20);
+  }, [workLogs, searchQuery, searchStartDate, searchEndDate]);
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
@@ -248,14 +259,51 @@ export default function App() {
               />
               
               <AnimatePresence>
-                {isSearchOpen && searchQuery.trim() && (
+                {isSearchOpen && (
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl border border-black/5 shadow-xl z-[60] overflow-hidden"
+                    className="absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl border border-black/5 shadow-xl z-[60] overflow-hidden"
                   >
-                    <div className="p-2 max-h-96 overflow-y-auto custom-scrollbar">
+                    <div className="p-4 border-b border-slate-50 bg-slate-50/50">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">기간 설정</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400">시작일</label>
+                          <input 
+                            type="date" 
+                            value={searchStartDate}
+                            onChange={(e) => setSearchStartDate(e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs rounded-lg border border-black/5 outline-none focus:ring-1 focus:ring-black/5"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400">종료일</label>
+                          <input 
+                            type="date" 
+                            value={searchEndDate}
+                            onChange={(e) => setSearchEndDate(e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs rounded-lg border border-black/5 outline-none focus:ring-1 focus:ring-black/5"
+                          />
+                        </div>
+                      </div>
+                      {(searchStartDate || searchEndDate || searchQuery) && (
+                        <button 
+                          onClick={() => {
+                            setSearchQuery('');
+                            setSearchStartDate('');
+                            setSearchEndDate('');
+                          }}
+                          className="mt-3 text-[10px] font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1"
+                        >
+                          <Eraser size={12} />
+                          필터 초기화
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="p-2 max-h-80 overflow-y-auto custom-scrollbar">
                       {searchResults.length > 0 ? (
                         searchResults.map(log => (
                           <button
@@ -275,7 +323,7 @@ export default function App() {
                         ))
                       ) : (
                         <div className="p-8 text-center text-slate-400 text-sm">
-                          검색 결과가 없습니다.
+                          {(searchQuery || searchStartDate || searchEndDate) ? '검색 결과가 없습니다.' : '검색어나 기간을 입력해주세요.'}
                         </div>
                       )}
                     </div>
