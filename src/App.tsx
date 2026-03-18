@@ -369,6 +369,13 @@ function CalendarHeader({ currentDate, onPrev, onNext, onToday }: { currentDate:
         </button>
       </div>
       <div className="flex items-center gap-2">
+        <button 
+          onClick={() => window.print()}
+          className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-black mr-2"
+          title="달력 인쇄"
+        >
+          <Printer size={20} />
+        </button>
         <button onClick={onPrev} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
           <ChevronLeft size={20} />
         </button>
@@ -417,21 +424,21 @@ function CalendarGrid({ currentDate, workLogs, selectedDate, onSelectDate, onAdd
             onClick={() => onSelectDate(day)}
             className={cn(
               "min-h-[100px] md:min-h-[120px] p-2 border-r border-b border-black/5 cursor-pointer transition-all relative group",
-              !isCurrentMonth && "bg-slate-50/50 text-slate-300",
-              isSelected && "bg-blue-50/30 ring-1 ring-inset ring-blue-200 z-10",
-              "hover:bg-slate-50"
+              !isCurrentMonth && "bg-slate-50/50 text-slate-300 print:bg-white print:text-slate-200",
+              isSelected && "bg-blue-50/30 ring-1 ring-inset ring-blue-200 z-10 print:bg-white print:ring-0",
+              "hover:bg-slate-50 print:bg-white"
             )}
           >
             <div className="flex justify-between items-start mb-1">
               <span className={cn(
                 "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full transition-colors",
-                isToday(day) ? "bg-black text-white" : isSelected ? "text-blue-600 font-bold" : ""
+                isToday(day) ? "bg-black text-white print:bg-slate-100 print:text-black print:border print:border-black" : isSelected ? "text-blue-600 font-bold print:text-black" : ""
               )}>
                 {format(day, 'd')}
               </span>
               <div className="flex items-center gap-1">
                 {totalCommission > 0 && (
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded print:bg-white print:border print:border-emerald-200">
                     {(totalCommission / 1000).toFixed(0)}k
                   </span>
                 )}

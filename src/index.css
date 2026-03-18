@@ -24,3 +24,40 @@
     @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
   }
 }
+
+@media print {
+  nav, header, .print-hidden, button {
+    display: none !important;
+  }
+  
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  
+  .lg\:col-span-8 {
+    grid-column: span 12 / span 12 !important;
+  }
+  
+  .lg\:col-span-4 {
+    display: none !important;
+  }
+  
+  .bg-white {
+    box-shadow: none !important;
+    border: none !important;
+  }
+  
+  .min-h-screen {
+    min-height: auto !important;
+  }
+  
+  .certificate-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
