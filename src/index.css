@@ -43,7 +43,8 @@
     margin: 1.5cm !important; /* Content margin from paper edge, hides browser headers/footers */
   }
   
-  nav, aside, header, footer, .print-hidden, button, .pb-24, .lg\:col-span-4 {
+  /* CRITICAL: Removed .pb-24 from here as it was hiding the main element */
+  nav, aside, header, footer, .print-hidden, button, .lg\:col-span-4 {
     display: none !important;
   }
   
@@ -53,6 +54,7 @@
     width: 100% !important;
     display: block !important;
     position: static !important;
+    min-height: auto !important;
   }
 
   /* Reset layout for print */
@@ -86,6 +88,7 @@
   }
   
   .bg-white {
+    background-color: white !important;
     box-shadow: none !important;
     border: none !important;
   }
