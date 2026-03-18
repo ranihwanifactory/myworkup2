@@ -414,7 +414,11 @@ export default function App() {
                               </span>
                             </div>
                             <p className="text-sm font-bold truncate">{log.workType} 현장</p>
-                            <p className="text-[10px] text-slate-500 truncate">{log.workerNames || '인원 정보 없음'}</p>
+                            <p className="text-[10px] text-slate-500 truncate">
+                              {log.workerNames || '인원 정보 없음'}
+                              {log.notes && <span className="text-slate-300 mx-1">|</span>}
+                              {log.notes && <span className="italic">{log.notes}</span>}
+                            </p>
                           </button>
                         ))
                       ) : (
@@ -820,6 +824,13 @@ const WorkLogCard: React.FC<WorkLogCardProps> = ({ log, onEdit, onDelete }) => {
           <p className="text-xs text-slate-600 line-clamp-2">{log.workerNames}</p>
         </div>
       )}
+
+      {log.notes && (
+        <div className="mt-3 pt-3 border-t border-black/5">
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">비고 (메모)</p>
+          <p className="text-xs text-slate-600 line-clamp-3">{log.notes}</p>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -1037,6 +1048,16 @@ function WorkLogForm({ initialData, onClose, onSubmit, defaultDate }: WorkLogFor
             />
           </div>
 
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase">비고 (메모)</label>
+            <textarea 
+              placeholder="추가 메모나 특이사항을 입력하세요"
+              value={formData.notes}
+              onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+              className="w-full px-4 py-2.5 rounded-xl border border-black/10 focus:ring-2 focus:ring-black/5 outline-none transition-all h-20 resize-none"
+            />
+          </div>
+
           <div className="bg-slate-900 rounded-2xl p-4 text-white flex justify-between items-center">
             <div>
               <p className="text-[10px] text-slate-400 font-bold uppercase">예상 수수료</p>
@@ -1225,6 +1246,7 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">업무 종류</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">인원</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">투입 인력</th>
+              <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">비고</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right print:hidden">관리</th>
             </tr>
           </thead>
@@ -1239,6 +1261,7 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
                 </td>
                 <td className="px-6 py-4 text-sm text-right font-medium">{log.workerCount}명</td>
                 <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate print:whitespace-normal">{log.workerNames || '-'}</td>
+                <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate print:whitespace-normal">{log.notes || '-'}</td>
                 <td className="px-6 py-4 text-right print:hidden">
                   <div className="flex items-center justify-end gap-1">
                     <button onClick={() => onEdit(log)} className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-blue-600 transition-all">
@@ -1290,6 +1313,13 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
               <div className="space-y-1">
                 <p className="text-[9px] font-bold text-slate-400 uppercase">투입 인력</p>
                 <p className="text-xs text-slate-600 line-clamp-1">{log.workerNames}</p>
+              </div>
+            )}
+
+            {log.notes && (
+              <div className="space-y-1">
+                <p className="text-[9px] font-bold text-slate-400 uppercase">비고 (메모)</p>
+                <p className="text-xs text-slate-600 line-clamp-2">{log.notes}</p>
               </div>
             )}
           </div>
@@ -1822,7 +1852,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === '0615') {
+    if (password.trim() === '0615') {
       setIsLoading(true);
       try {
         await signInAnonymously(auth);
