@@ -1224,7 +1224,6 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">날짜</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">업무 종류</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">인원</th>
-              <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">수수료</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">투입 인력</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right print:hidden">관리</th>
             </tr>
@@ -1239,7 +1238,6 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm text-right font-medium">{log.workerCount}명</td>
-                <td className="px-6 py-4 text-sm text-right font-bold text-emerald-600">{log.commission.toLocaleString()}원</td>
                 <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate print:whitespace-normal">{log.workerNames || '-'}</td>
                 <td className="px-6 py-4 text-right print:hidden">
                   <div className="flex items-center justify-end gap-1">
@@ -1281,14 +1279,10 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-black/5">
+            <div className="bg-slate-50 p-3 rounded-xl border border-black/5">
               <div className="space-y-0.5">
                 <p className="text-[9px] font-bold text-slate-400 uppercase">인원</p>
                 <p className="text-sm font-bold">{log.workerCount}명</p>
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-[9px] font-bold text-slate-400 uppercase">수수료</p>
-                <p className="text-sm font-bold text-emerald-600">{log.commission.toLocaleString()}원</p>
               </div>
             </div>
 
