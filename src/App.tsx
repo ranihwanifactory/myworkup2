@@ -21,7 +21,10 @@ import {
   DollarSign,
   X,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  Printer,
+  Eraser
 } from 'lucide-react';
 import { 
   format, 
@@ -36,12 +39,29 @@ import {
   addDays, 
   eachDayOfInterval,
   parseISO,
-  isToday
+  isToday,
+  subDays,
+  startOfToday,
+  endOfToday,
+  startOfYear,
+  endOfYear,
+  subYears
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts';
 
 // --- Utilities ---
 function cn(...inputs: ClassValue[]) {
@@ -86,7 +106,7 @@ const getWorkTypeColor = (type: string) => {
 export default function App() {
   const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [activeTab, setActiveTab] = useState<'calendar' | 'dashboard' | 'logs' | 'settings'>('calendar');
+  const [activeTab, setActiveTab] = useState<'calendar' | 'dashboard' | 'logs' | 'certificate' | 'settings'>('calendar');
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingLog, setEditingLog] = useState<WorkLog | null>(null);
@@ -159,6 +179,7 @@ export default function App() {
         <NavItem icon={<CalendarIcon size={20} />} active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} label="달력" />
         <NavItem icon={<LayoutDashboard size={20} />} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} label="통계" />
         <NavItem icon={<ClipboardList size={20} />} active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} label="일지" />
+        <NavItem icon={<FileText size={20} />} active={activeTab === 'certificate'} onClick={() => setActiveTab('certificate')} label="확인증" />
         <NavItem icon={<Settings size={20} />} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label="설정" />
       </nav>
 
@@ -170,6 +191,7 @@ export default function App() {
               {activeTab === 'calendar' && '업무 일정 관리'}
               {activeTab === 'dashboard' && '업무 통계 분석'}
               {activeTab === 'logs' && '전체 업무 일지'}
+              {activeTab === 'certificate' && '임금 이체 확인증'}
               {activeTab === 'settings' && '시스템 설정'}
             </h1>
             <p className="text-slate-500 text-sm mt-1">
@@ -207,16 +229,34 @@ export default function App() {
                   workLogs={workLogs} 
                   selectedDate={selectedDate}
                   onSelectDate={setSelectedDate}
+                  onAddLog={() => {
+                    setEditingLog(null);
+                    setIsFormOpen(true);
+                  }}
                 />
               </div>
 
               {/* Detail Section */}
               <div className="lg:col-span-4 flex flex-col gap-6">
                 <div className="bg-white rounded-2xl border border-black/5 shadow-sm p-6">
-                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                    <CheckCircle2 size={18} className="text-emerald-500" />
-                    {selectedDate ? format(selectedDate, 'MM월 dd일') : '날짜 선택'} 업무 내역
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <CheckCircle2 size={18} className="text-emerald-500" />
+                      {selectedDate ? format(selectedDate, 'MM월 dd일') : '날짜 선택'} 업무 내역
+                    </h3>
+                    {selectedDate && (
+                      <button 
+                        onClick={() => {
+                          setEditingLog(null);
+                          setIsFormOpen(true);
+                        }}
+                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-black transition-colors"
+                        title="이 날짜에 새 일지 추가"
+                      >
+                        <Plus size={18} />
+                      </button>
+                    )}
+                  </div>
                   
                   <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                     {filteredLogs.length > 0 ? (
@@ -260,6 +300,7 @@ export default function App() {
 
           {activeTab === 'dashboard' && <Dashboard workLogs={workLogs} stats={stats} />}
           {activeTab === 'logs' && <LogsTable workLogs={workLogs} onEdit={setEditingLog} onDelete={handleDeleteLog} />}
+          {activeTab === 'certificate' && <CertificateView workLogs={workLogs} />}
           {activeTab === 'settings' && <SettingsView workLogs={workLogs} setWorkLogs={setWorkLogs} />}
         </div>
       </main>
@@ -332,7 +373,7 @@ function CalendarHeader({ currentDate, onPrev, onNext, onToday }: { currentDate:
   );
 }
 
-function CalendarGrid({ currentDate, workLogs, selectedDate, onSelectDate }: { currentDate: Date, workLogs: WorkLog[], selectedDate: Date | null, onSelectDate: (d: Date) => void }) {
+function CalendarGrid({ currentDate, workLogs, selectedDate, onSelectDate, onAddLog }: { currentDate: Date, workLogs: WorkLog[], selectedDate: Date | null, onSelectDate: (d: Date) => void, onAddLog: () => void }) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -381,11 +422,24 @@ function CalendarGrid({ currentDate, workLogs, selectedDate, onSelectDate }: { c
               )}>
                 {format(day, 'd')}
               </span>
-              {totalCommission > 0 && (
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                  {(totalCommission / 1000).toFixed(0)}k
-                </span>
-              )}
+              <div className="flex items-center gap-1">
+                {totalCommission > 0 && (
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                    {(totalCommission / 1000).toFixed(0)}k
+                  </span>
+                )}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectDate(day);
+                    onAddLog();
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-black transition-all"
+                  title="이 날짜에 일지 추가"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1 overflow-hidden">
@@ -736,20 +790,77 @@ function Dashboard({ workLogs, stats }: DashboardProps) {
     return Object.entries(statsMap).sort((a, b) => b[1] - a[1]);
   }, [monthLogs]);
 
+  const trendData = useMemo(() => {
+    const last6Months = Array.from({ length: 6 }).map((_, i) => {
+      const d = subMonths(new Date(), 5 - i);
+      return format(d, 'yyyy-MM');
+    });
+
+    return last6Months.map(month => {
+      const logs = workLogs.filter(log => log.date.startsWith(month));
+      return {
+        month: format(parseISO(`${month}-01`), 'M월'),
+        commission: logs.reduce((sum, log) => sum + log.commission, 0),
+        amount: logs.reduce((sum, log) => sum + log.totalAmount, 0),
+      };
+    });
+  }, [workLogs]);
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard title="이번 달 수수료" value={`${stats.totalCommission.toLocaleString()}원`} icon={<DollarSign className="text-emerald-500" />} color="emerald" />
         <StatCard title="총 투입 인원" value={`${stats.totalWorkers}명`} icon={<Users className="text-blue-500" />} color="blue" />
         <StatCard title="업무 수행일" value={`${stats.workDays}일`} icon={<CalendarIcon className="text-purple-500" />} color="purple" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-black/5 shadow-sm">
+          <h3 className="text-lg font-bold mb-6">월별 수수료 추이</h3>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData}>
+                <defs>
+                  <linearGradient id="colorComm" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                  tickFormatter={(val) => `${(val / 10000).toFixed(0)}만`}
+                />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  formatter={(val: number) => [`${val.toLocaleString()}원`, '수수료']}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="commission" 
+                  stroke="#10b981" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorComm)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
         <div className="bg-white p-8 rounded-3xl border border-black/5 shadow-sm">
-          <h3 className="text-lg font-bold mb-6">업무 종류별 수수료 비중</h3>
+          <h3 className="text-lg font-bold mb-6">업무 종류별 비중</h3>
           <div className="space-y-6">
             {typeStats.map(([type, amount]) => {
-              const percentage = (amount / stats.totalCommission) * 100;
+              const percentage = stats.totalCommission > 0 ? (amount / stats.totalCommission) * 100 : 0;
               return (
                 <div key={type} className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -767,19 +878,6 @@ function Dashboard({ workLogs, stats }: DashboardProps) {
               );
             })}
             {typeStats.length === 0 && <p className="text-center text-slate-400 py-10">데이터가 없습니다.</p>}
-          </div>
-        </div>
-
-        <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl">
-          <h3 className="text-lg font-bold mb-6">최근 성과 분석</h3>
-          <div className="flex items-center justify-center py-10">
-            <div className="text-center">
-              <div className="w-32 h-32 rounded-full border-8 border-emerald-500/20 border-t-emerald-500 flex items-center justify-center mb-4 mx-auto">
-                <span className="text-3xl font-bold">84%</span>
-              </div>
-              <p className="text-slate-400 text-sm">목표 달성률</p>
-              <p className="text-xs text-slate-500 mt-1">지난 달 대비 12% 상승</p>
-            </div>
           </div>
         </div>
       </div>
@@ -854,6 +952,344 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
   );
 }
 
+function CertificateView({ workLogs }: { workLogs: WorkLog[] }) {
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [selectedWorker, setSelectedWorker] = useState<string>('all');
+
+  const workers = useMemo(() => {
+    const names = new Set<string>();
+    workLogs.forEach(log => {
+      if (log.workerNames) {
+        log.workerNames.split(',').forEach(n => names.add(n.trim()));
+      }
+    });
+    return Array.from(names).sort();
+  }, [workLogs]);
+
+  const filteredLogs = useMemo(() => {
+    return workLogs.filter(log => {
+      const isWithinRange = log.date >= startDate && log.date <= endDate;
+      if (!isWithinRange) return false;
+      if (selectedWorker === 'all') return true;
+      return log.workerNames?.split(',').map(n => n.trim()).includes(selectedWorker);
+    });
+  }, [workLogs, startDate, endDate, selectedWorker]);
+
+  const workerStats = useMemo(() => {
+    const stats: Record<string, any> = {};
+    
+    filteredLogs.forEach(log => {
+      const logWorkers = log.workerNames?.split(',').map(n => n.trim()).filter(n => n) || [];
+      const netAmount = log.totalAmount - log.commission;
+      const amountPerWorker = logWorkers.length > 0 ? netAmount / logWorkers.length : 0;
+      const commissionPerWorker = logWorkers.length > 0 ? log.commission / logWorkers.length : 0;
+      const totalPerWorker = logWorkers.length > 0 ? log.totalAmount / logWorkers.length : 0;
+
+      logWorkers.forEach(worker => {
+        if (selectedWorker !== 'all' && worker !== selectedWorker) return;
+
+        if (!stats[worker]) {
+          stats[worker] = {
+            name: worker,
+            totalDays: 0,
+            totalAmount: 0,
+            totalCommission: 0,
+            totalNetAmount: 0,
+            details: []
+          };
+        }
+
+        stats[worker].totalDays += 1;
+        stats[worker].totalAmount += totalPerWorker;
+        stats[worker].totalCommission += commissionPerWorker;
+        stats[worker].totalNetAmount += amountPerWorker;
+        stats[worker].details.push({
+          date: log.date,
+          workType: log.workType,
+          unitPrice: log.unitPrice,
+          totalWorkers: logWorkers.length,
+          amountPerWorker
+        });
+      });
+    });
+
+    return Object.values(stats).sort((a, b) => b.totalNetAmount - a.totalNetAmount);
+  }, [filteredLogs, selectedWorker]);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 print:p-0 print:m-0">
+      {/* Filter Section */}
+      <div className="bg-white p-6 rounded-3xl border border-black/5 shadow-sm print:hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase">시작일</label>
+            <input 
+              type="date" 
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-black/10 focus:ring-2 focus:ring-black/5 outline-none transition-all"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase">종료일</label>
+            <input 
+              type="date" 
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-black/10 focus:ring-2 focus:ring-black/5 outline-none transition-all"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase">작업자 선택</label>
+            <select 
+              value={selectedWorker}
+              onChange={e => setSelectedWorker(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-black/10 focus:ring-2 focus:ring-black/5 outline-none transition-all bg-white"
+            >
+              <option value="all">전체 작업자</option>
+              {workers.map(w => <option key={w} value={w}>{w}</option>)}
+            </select>
+          </div>
+        </div>
+        
+        <div className="mt-6 flex flex-wrap gap-2">
+          <QuickFilterBtn label="최근 7일" onClick={() => {
+            setStartDate(format(subDays(new Date(), 6), 'yyyy-MM-dd'));
+            setEndDate(format(new Date(), 'yyyy-MM-dd'));
+          }} />
+          <QuickFilterBtn label="이번 달" onClick={() => {
+            setStartDate(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+            setEndDate(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+          }} />
+          <QuickFilterBtn label="지난 달" onClick={() => {
+            const lastMonth = subMonths(new Date(), 1);
+            setStartDate(format(startOfMonth(lastMonth), 'yyyy-MM-dd'));
+            setEndDate(format(endOfMonth(lastMonth), 'yyyy-MM-dd'));
+          }} />
+          <QuickFilterBtn label="올해 전체" onClick={() => {
+            setStartDate(format(startOfYear(new Date()), 'yyyy-MM-dd'));
+            setEndDate(format(endOfYear(new Date()), 'yyyy-MM-dd'));
+          }} />
+          <button 
+            onClick={handlePrint}
+            className="ml-auto flex items-center gap-2 bg-black text-white px-4 py-2 rounded-xl font-bold hover:bg-slate-800 transition-all"
+          >
+            <Printer size={16} />
+            인쇄하기
+          </button>
+        </div>
+      </div>
+
+      {/* Certificates List */}
+      <div className="space-y-10">
+        {workerStats.length > 0 ? (
+          workerStats.map((stats, idx) => (
+            <CertificateCard key={idx} stats={stats} startDate={startDate} endDate={endDate} />
+          ))
+        ) : (
+          <div className="bg-white p-20 rounded-3xl border border-black/5 text-center text-slate-400 print:hidden">
+            <FileText size={48} className="mx-auto mb-4 opacity-20" />
+            <p>해당 기간에 기록된 업무가 없습니다.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QuickFilterBtn({ label, onClick }: { label: string, onClick: () => void }) {
+  return (
+    <button 
+      onClick={onClick}
+      className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition-all"
+    >
+      {label}
+    </button>
+  );
+}
+
+interface CertificateCardProps {
+  stats: any;
+  startDate: string;
+  endDate: string;
+}
+
+const CertificateCard: React.FC<CertificateCardProps> = ({ stats, startDate, endDate }) => {
+  return (
+    <div className="certificate-container bg-white p-10 rounded-3xl border-2 border-slate-900 shadow-xl max-w-3xl mx-auto print:shadow-none print:border-slate-900 print:rounded-none print:p-8 print:m-0 print:w-full print:max-w-none page-break-after-always">
+      <div className="text-center border-b-2 border-slate-900 pb-6 mb-8">
+        <h2 className="text-3xl font-black tracking-tighter uppercase">임금 이체 확인증</h2>
+        <p className="text-slate-400 text-xs font-bold mt-1 tracking-widest">WAGE PAYMENT CERTIFICATE</p>
+      </div>
+
+      <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200">
+        <h3 className="text-2xl font-black mb-4 text-slate-900">{stats.name}</h3>
+        <div className="grid grid-cols-2 gap-y-2 text-sm">
+          <div className="flex justify-between pr-4 border-r border-slate-200">
+            <span className="text-slate-500 font-bold">대상 기간</span>
+            <span className="font-medium">{startDate} ~ {endDate}</span>
+          </div>
+          <div className="flex justify-between pl-4">
+            <span className="text-slate-500 font-bold">작업 일수</span>
+            <span className="font-medium">{stats.totalDays}일</span>
+          </div>
+          <div className="flex justify-between pr-4 border-r border-slate-200">
+            <span className="text-slate-500 font-bold">발행일</span>
+            <span className="font-medium">{format(new Date(), 'yyyy-MM-dd')}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-emerald-50 border-2 border-emerald-500/20 p-6 rounded-2xl mb-8">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-emerald-700 font-bold text-sm">총 작업금액</span>
+          <span className="text-slate-600 font-medium">{Math.round(stats.totalAmount).toLocaleString()}원</span>
+        </div>
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-emerald-700 font-bold text-sm">수수료 공제</span>
+          <span className="text-rose-500 font-medium">-{Math.round(stats.totalCommission).toLocaleString()}원</span>
+        </div>
+        <div className="pt-4 border-t border-emerald-500/20 flex justify-between items-center">
+          <span className="text-emerald-900 font-black text-lg">실 지급액</span>
+          <span className="text-emerald-600 font-black text-2xl">{Math.round(stats.totalNetAmount).toLocaleString()}원</span>
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">작업 상세 내역</h4>
+        <div className="overflow-hidden rounded-xl border border-slate-200">
+          <table className="w-full text-xs text-left">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-2 font-bold">날짜</th>
+                <th className="px-4 py-2 font-bold">작업종류</th>
+                <th className="px-4 py-2 font-bold text-right">단가</th>
+                <th className="px-4 py-2 font-bold text-center">인원</th>
+                <th className="px-4 py-2 font-bold text-right">배분금액</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {stats.details.map((d: any, i: number) => (
+                <tr key={i}>
+                  <td className="px-4 py-2">{d.date}</td>
+                  <td className="px-4 py-2 font-medium">{d.workType}</td>
+                  <td className="px-4 py-2 text-right">{d.unitPrice.toLocaleString()}원</td>
+                  <td className="px-4 py-2 text-center">{d.totalWorkers}명</td>
+                  <td className="px-4 py-2 text-right font-bold">{Math.round(d.amountPerWorker).toLocaleString()}원</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-8 mt-12">
+        <SignatureBox label="근로자 서명" />
+        <SignatureBox label="사업주 서명" />
+      </div>
+
+      <div className="mt-12 pt-6 border-t border-slate-100 text-center text-[10px] text-slate-400">
+        <p>※ 본 확인증은 임금 지급 내역을 확인하는 문서입니다.</p>
+        <p>※ 문의사항이 있으시면 사업주에게 연락하시기 바랍니다.</p>
+      </div>
+    </div>
+  );
+}
+
+interface SignatureBoxProps {
+  label: string;
+}
+
+const SignatureBox: React.FC<SignatureBoxProps> = ({ label }) => {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = React.useState(false);
+
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    setIsDrawing(true);
+    const rect = canvas.getBoundingClientRect();
+    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : e.nativeEvent.offsetX;
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : e.nativeEvent.offsetY;
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : e.nativeEvent.offsetX;
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : e.nativeEvent.offsetY;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clear = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }, []);
+
+  return (
+    <div className="text-center">
+      <p className="text-xs font-black text-slate-900 mb-3 uppercase tracking-widest">{label}</p>
+      <div className="relative group">
+        <canvas 
+          ref={canvasRef}
+          width={250}
+          height={100}
+          className="border-2 border-slate-200 rounded-xl bg-slate-50 cursor-crosshair w-full h-[100px] touch-none"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseOut={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+        />
+        <button 
+          onClick={clear}
+          className="absolute top-2 right-2 p-1.5 bg-white rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-all text-slate-400 hover:text-rose-500 print:hidden"
+        >
+          <Eraser size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SettingsView({ workLogs, setWorkLogs }: { workLogs: WorkLog[], setWorkLogs: (logs: WorkLog[]) => void }) {
   const handleExport = () => {
     const data = JSON.stringify({ workLogs, version: '2.0', exportDate: new Date().toISOString() }, null, 2);
@@ -861,7 +1297,7 @@ function SettingsView({ workLogs, setWorkLogs }: { workLogs: WorkLog[], setWorkL
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `젊은인력_업무일지_${format(new Date(), 'yyyyMMdd')}.json`;
+    a.download = `인력_업무일지_${format(new Date(), 'yyyyMMdd')}.json`;
     a.click();
   };
 
