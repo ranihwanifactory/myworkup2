@@ -398,7 +398,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-[#F5F5F4] text-[#141414] font-sans">
       {/* Sidebar / Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/5 px-6 py-3 flex justify-around items-center z-50 md:top-0 md:bottom-auto md:flex-col md:w-20 md:h-full md:border-t-0 md:border-r">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/5 px-6 py-3 flex justify-around items-center z-50 md:top-0 md:bottom-auto md:flex-col md:w-20 md:h-full md:border-t-0 md:border-r print:hidden">
         <div className="hidden md:flex items-center justify-center h-16 mb-8">
           <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white font-bold">젊</div>
         </div>
@@ -410,8 +410,8 @@ function AppContent() {
       </nav>
 
       {/* Main Content */}
-      <main className="pb-24 md:pb-0 md:pl-20 min-h-screen">
-        <header className="p-6 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <main className="pb-24 md:pb-0 md:pl-20 min-h-screen print:pb-0 print:pl-0">
+        <header className="p-4 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
               {activeTab === 'calendar' && '업무 일정 관리'}
@@ -529,11 +529,11 @@ function AppContent() {
           </div>
         </header>
 
-        <div className="px-6 md:px-10 max-w-7xl mx-auto">
+        <div className="px-3 md:px-10 max-w-7xl mx-auto print:px-0 print:max-w-none">
           {activeTab === 'calendar' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:block">
               {/* Calendar Section */}
-              <div className="lg:col-span-8 bg-white rounded-2xl border border-black/5 shadow-sm overflow-hidden">
+              <div className="lg:col-span-8 bg-white rounded-2xl border border-black/5 shadow-sm overflow-hidden print:border-0 print:shadow-none">
                 <CalendarHeader 
                   currentDate={currentDate} 
                   onPrev={() => setCurrentDate(subMonths(currentDate, 1))}
@@ -553,7 +553,7 @@ function AppContent() {
               </div>
 
               {/* Detail Section */}
-              <div className="lg:col-span-4 flex flex-col gap-6">
+              <div className="lg:col-span-4 flex flex-col gap-6 print:hidden">
                 <div className="bg-white rounded-2xl border border-black/5 shadow-sm p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-bold text-lg flex items-center gap-2">
@@ -682,19 +682,19 @@ function NavItem({ icon, active, onClick, label }: { icon: React.ReactNode, acti
 
 function CalendarHeader({ currentDate, onPrev, onNext, onToday }: { currentDate: Date, onPrev: () => void, onNext: () => void, onToday: () => void }) {
   return (
-    <div className="p-6 border-bottom border-black/5 flex items-center justify-between">
+    <div className="p-4 md:p-6 border-bottom border-black/5 flex items-center justify-between print:justify-center print:border-0 print:pb-2">
       <div className="flex items-center gap-4">
-        <h2 className="text-xl font-bold">
+        <h2 className="text-xl font-bold print:text-2xl print:tracking-tight">
           {format(currentDate, 'yyyy년 MM월', { locale: ko })}
         </h2>
         <button 
           onClick={onToday}
-          className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+          className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-colors print:hidden"
         >
           오늘
         </button>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 print:hidden">
         <button 
           onClick={() => window.print()}
           className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-black mr-2"
@@ -731,9 +731,9 @@ function CalendarGrid({ currentDate, workLogs, selectedDate, onSelectDate, onAdd
   }, [workLogs]);
 
   return (
-    <div className="grid grid-cols-7 border-t border-black/5">
+    <div className="grid grid-cols-7 border-t border-black/5 print:border-t-slate-300">
       {['일', '월', '화', '수', '목', '금', '토'].map(day => (
-        <div key={day} className="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-black/5">
+        <div key={day} className="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-black/5 print:border-b-slate-300 print:text-slate-600">
           {day}
         </div>
       ))}
@@ -749,22 +749,22 @@ function CalendarGrid({ currentDate, workLogs, selectedDate, onSelectDate, onAdd
             key={idx}
             onClick={() => onSelectDate(day)}
             className={cn(
-              "min-h-[100px] md:min-h-[120px] p-2 border-r border-b border-black/5 cursor-pointer transition-all relative group",
+              "min-h-[80px] md:min-h-[120px] p-1.5 md:p-2 border-r border-b border-black/5 cursor-pointer transition-all relative group print:border-r-slate-300 print:border-b-slate-300",
               !isCurrentMonth && "bg-slate-50/50 text-slate-300 print:bg-white print:text-slate-200",
               isSelected && "bg-blue-50/30 ring-1 ring-inset ring-blue-200 z-10 print:bg-white print:ring-0",
               "hover:bg-slate-50 print:bg-white"
             )}
           >
-            <div className="flex justify-between items-start mb-1">
+            <div className="flex justify-between items-start mb-0.5 md:mb-1">
               <span className={cn(
-                "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full transition-colors",
+                "text-xs md:text-sm font-medium w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full transition-colors",
                 isToday(day) ? "bg-black text-white print:bg-slate-100 print:text-black print:border print:border-black" : isSelected ? "text-blue-600 font-bold print:text-black" : ""
               )}>
                 {format(day, 'd')}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 md:gap-1">
                 {totalCommission > 0 && (
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded print:bg-white print:border print:border-emerald-200">
+                  <span className="text-[8px] md:text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 md:px-1.5 py-0.5 rounded print:bg-white print:border print:border-emerald-200">
                     {(totalCommission / 1000).toFixed(0)}k
                   </span>
                 )}
@@ -774,7 +774,7 @@ function CalendarGrid({ currentDate, workLogs, selectedDate, onSelectDate, onAdd
                     onSelectDate(day);
                     onAddLog();
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-black transition-all"
+                  className="hidden md:flex opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-black transition-all print:hidden"
                   title="이 날짜에 일지 추가"
                 >
                   <Plus size={14} />
@@ -782,22 +782,22 @@ function CalendarGrid({ currentDate, workLogs, selectedDate, onSelectDate, onAdd
               </div>
             </div>
 
-            <div className="space-y-1 overflow-hidden">
+            <div className="space-y-0.5 md:space-y-1 overflow-hidden">
               {dayLogs.slice(0, 3).map(log => (
                 <div 
                   key={log.id}
                   className={cn(
-                    "text-[9px] md:text-[10px] px-1.5 py-0.5 rounded border truncate leading-tight",
+                    "text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded border truncate leading-tight",
                     getWorkTypeColor(log.workType)
                   )}
                 >
-                  <span className="font-bold mr-1">{log.workerCount}</span>
+                  <span className="font-bold mr-0.5 md:mr-1">{log.workerCount}</span>
                   {log.workType}
                 </div>
               ))}
               {dayLogs.length > 3 && (
-                <div className="text-[9px] text-slate-400 pl-1">
-                  외 {dayLogs.length - 3}건 더보기
+                <div className="text-[8px] md:text-[9px] text-slate-400 pl-0.5 md:pl-1">
+                  +{dayLogs.length - 3}
                 </div>
               )}
             </div>
@@ -828,12 +828,12 @@ const WorkLogCard: React.FC<WorkLogCardProps> = ({ log, onEdit, onDelete }) => {
           </span>
           <h4 className="font-bold text-slate-900">{log.workType} 현장</h4>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={onEdit} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600">
-            <Edit2 size={14} />
+        <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+          <button onClick={onEdit} className="p-2 md:p-1.5 bg-white md:bg-transparent border border-black/5 md:border-0 rounded-lg text-blue-600 md:text-slate-400 md:hover:text-blue-600 transition-all shadow-sm md:shadow-none">
+            <Edit2 size={16} className="md:w-3.5 md:h-3.5" />
           </button>
-          <button onClick={onDelete} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-rose-600">
-            <Trash2 size={14} />
+          <button onClick={onDelete} className="p-2 md:p-1.5 bg-white md:bg-transparent border border-black/5 md:border-0 rounded-lg text-rose-600 md:text-slate-400 md:hover:text-rose-600 transition-all shadow-sm md:shadow-none">
+            <Trash2 size={16} className="md:w-3.5 md:h-3.5" />
           </button>
         </div>
       </div>
@@ -1244,7 +1244,8 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
 
   return (
     <div className="bg-white rounded-3xl border border-black/5 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="overflow-x-auto">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-black/5">
@@ -1280,14 +1281,58 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
                 </td>
               </tr>
             ))}
-            {sortedLogs.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-6 py-20 text-center text-slate-400">데이터가 없습니다.</td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden divide-y divide-black/5">
+        {sortedLogs.map(log => (
+          <div key={log.id} className="p-4 space-y-3">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-slate-400">{log.date}</p>
+                <div className="flex items-center gap-2">
+                  <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", getWorkTypeColor(log.workType))}>
+                    {log.workType}
+                  </span>
+                  <span className="text-sm font-bold">{log.workType} 현장</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => onEdit(log)} className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100">
+                  <Edit2 size={18} />
+                </button>
+                <button onClick={() => onDelete(log.id)} className="p-2.5 bg-rose-50 text-rose-600 rounded-xl border border-rose-100">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-black/5">
+              <div className="space-y-0.5">
+                <p className="text-[9px] font-bold text-slate-400 uppercase">인원</p>
+                <p className="text-sm font-bold">{log.workerCount}명</p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-[9px] font-bold text-slate-400 uppercase">수수료</p>
+                <p className="text-sm font-bold text-emerald-600">{log.commission.toLocaleString()}원</p>
+              </div>
+            </div>
+
+            {log.workerNames && (
+              <div className="space-y-1">
+                <p className="text-[9px] font-bold text-slate-400 uppercase">투입 인력</p>
+                <p className="text-xs text-slate-600 line-clamp-1">{log.workerNames}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {sortedLogs.length === 0 && (
+        <div className="px-6 py-20 text-center text-slate-400">데이터가 없습니다.</div>
+      )}
     </div>
   );
 }
@@ -1461,7 +1506,7 @@ interface CertificateCardProps {
 
 const CertificateCard: React.FC<CertificateCardProps> = ({ stats, startDate, endDate }) => {
   return (
-    <div className="certificate-container bg-white p-10 rounded-3xl border-2 border-slate-900 shadow-xl max-w-3xl mx-auto print:shadow-none print:border-slate-900 print:rounded-none print:p-8 print:m-0 print:w-full print:max-w-none page-break-after-always">
+    <div className="certificate-container bg-white p-5 md:p-10 rounded-3xl border-2 border-slate-900 shadow-xl max-w-3xl mx-auto print:shadow-none print:border-slate-900 print:rounded-none print:p-8 print:m-0 print:w-full print:max-w-none page-break-after-always">
       <div className="text-center border-b-2 border-slate-900 pb-6 mb-8">
         <h2 className="text-3xl font-black tracking-tighter uppercase">임금 이체 확인증</h2>
         <p className="text-slate-400 text-xs font-bold mt-1 tracking-widest">WAGE PAYMENT CERTIFICATE</p>
