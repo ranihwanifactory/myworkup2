@@ -43,7 +43,7 @@
     margin: 1.5cm !important; /* Content margin from paper edge */
   }
   
-  nav, header, .print-hidden, button, .pb-24, .lg\:col-span-4, .lg\:grid-cols-12 > div:not(.lg\:col-span-8) {
+  nav, header, footer, .print-hidden, button, .pb-24, .lg\:col-span-4 {
     display: none !important;
   }
   
@@ -61,9 +61,12 @@
   }
   
   .lg\:col-span-8 {
-    grid-column: span 12 / span 12 !important;
     width: 100% !important;
+    max-width: none !important;
     display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
     float: none !important;
   }
   
