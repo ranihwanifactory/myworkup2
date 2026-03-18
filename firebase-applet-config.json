@@ -1,9 +1,10 @@
 {
-  "apiKey": "AIzaSyDbGBNoj53CdufejFqmA5hsyK81EyWmGuA",
-  "authDomain": "koreajobhunter-2cb76.firebaseapp.com",
   "projectId": "koreajobhunter-2cb76",
+  "appId": "1:427949515852:web:e4e6071ad97570d9e880e9",
+  "apiKey": "AIzaSyBOCNYaoGcmAMWHDxCbVVPiC7XvqDTLcVQ",
+  "authDomain": "koreajobhunter-2cb76.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-4965077b-5830-4596-8af5-2d70a40bb07b",
   "storageBucket": "koreajobhunter-2cb76.firebasestorage.app",
   "messagingSenderId": "427949515852",
-  "appId": "1:427949515852:web:a3b700433b7ac764e880e9",
-  "databaseURL": "https://koreajobhunter-2cb76-default-rtdb.firebaseio.com"
+  "measurementId": ""
 }

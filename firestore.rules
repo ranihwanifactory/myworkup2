@@ -1,73 +1,118 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (UID)
+    // Fields:
+    //   - uid: string (required) - User's UID
+    //   - email: string (required) - User's email
+    //   - displayName: string (optional) - User's display name
+    //   - photoURL: string (optional) - User's photo URL
+    //   - role: string (required) - 'admin' or 'user'
+    //
+    // Collection: workLogs
+    // Document ID: logId (auto-generated)
+    // Fields:
+    //   - id: string (required) - Document ID
+    //   - userId: string (required) - Owner's UID
+    //   - date: string (required, YYYY-MM-DD) - Work date
+    //   - workType: string (required) - Site name or work type
+    //   - unitPrice: number (required) - Daily rate
+    //   - workerCount: number (required) - Number of workers
+    //   - totalAmount: number (required) - Total amount
+    //   - commissionRate: number (required) - Commission rate (%)
+    //   - commission: number (required) - Commission amount
+    //   - workerNames: string (optional) - List of worker names
+    //   - notes: string (optional) - Notes/Memo
+    //   - createdAt: string (required) - Creation timestamp
+    //
+    // ===============================================================
+
     // ===============================================================
     // Helper Functions
     // ===============================================================
+    
     function isAuthenticated() {
       return request.auth != null;
     }
-
+    
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-
-    function isAdmin() {
-      return isAuthenticated() && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         (request.auth.token.email == "acehwan69@gmail.com" && request.auth.token.email_verified == true));
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
     }
-
+    
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "acehwan69@gmail.com" && request.auth.token.email_verified == true));
+    }
+    
     function isValidEmail(email) {
       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
-
-    function isValidWorkLog(data) {
-      return data.keys().hasAll(['date', 'title', 'content', 'authorEmail']) &&
-             data.date is string && data.date.matches("^\\d{4}-\\d{2}-\\d{2}$") &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.content is string && data.content.size() > 0 && data.content.size() < 5000 &&
-             data.authorEmail is string && isValidEmail(data.authorEmail);
+    
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}$");
     }
 
+    function isValidDateTimeString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email', 'role']) &&
-             data.uid is string &&
-             data.email is string && isValidEmail(data.email) &&
+      return data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'role']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
              data.role in ['admin', 'user'];
     }
 
-    // ===============================================================
-    // Collection Rules
-    // ===============================================================
-
-    // WorkLogs Collection
-    match /worklogs/{logId} {
-      // Admin can do anything
-      // Users can read all worklogs (public calendar)
-      // Users can only create/update/delete their own worklogs
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidWorkLog(request.resource.data) && 
-                      (request.resource.data.authorEmail == request.auth.token.email || isAdmin());
-      allow update: if isAuthenticated() && isValidWorkLog(request.resource.data) && 
-                      (resource.data.authorEmail == request.auth.token.email || isAdmin());
-      allow delete: if isAuthenticated() && (resource.data.authorEmail == request.auth.token.email || isAdmin());
+    function isValidWorkLog(data) {
+      return data.keys().hasAll(['userId', 'date', 'workType', 'unitPrice', 'workerCount', 'totalAmount', 'commissionRate', 'commission', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             isValidDateString(data.date) &&
+             data.workType is string && data.workType.size() > 0 && data.workType.size() < 200 &&
+             data.unitPrice is number && data.unitPrice >= 0 &&
+             data.workerCount is number && data.workerCount >= 0 &&
+             data.totalAmount is number &&
+             data.commissionRate is number &&
+             data.commission is number &&
+             isValidDateTimeString(data.createdAt) &&
+             (!('workerNames' in data) || (data.workerNames is string && data.workerNames.size() < 2000)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() < 5000));
     }
 
-    // Users Collection
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
     match /users/{userId} {
-      // Users can read their own profile
-      // Admin can read all profiles
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
-      // Users can create their own profile (default role: user)
-      // Admin can create any profile
-      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
-                      ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
-      // Only admin can update roles
-      // Users can update their own non-role fields
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
-                      ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
-      allow delete: if isAdmin();
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /workLogs/{logId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidWorkLog(request.resource.data);
+      allow update: if isDocOwner() && isValidWorkLog(request.resource.data) && (request.resource.data.userId == resource.data.userId) || isAdmin();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+    
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
     }
   }
 }

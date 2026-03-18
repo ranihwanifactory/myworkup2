@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Component } from 'react';
 import { 
   Calendar as CalendarIcon, 
   LayoutDashboard, 
@@ -65,10 +65,133 @@ import {
   AreaChart,
   Area
 } from 'recharts';
+import { 
+  db, 
+  auth, 
+  googleProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged,
+  User
+} from './firebase';
+import { 
+  collection, 
+  query, 
+  where, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  serverTimestamp,
+  orderBy,
+  writeBatch
+} from 'firebase/firestore';
 
 // --- Utilities ---
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+// --- Error Handling ---
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: any;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    const { hasError, error } = this.state;
+    if (hasError) {
+      let message = "문제가 발생했습니다.";
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed.error.includes('insufficient permissions')) {
+          message = "권한이 없습니다. 관리자에게 문의하세요.";
+        }
+      } catch (e) {
+        message = error.message || message;
+      }
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-black/5 text-center max-w-md">
+            <AlertCircle size={48} className="text-rose-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">오류 발생</h2>
+            <p className="text-slate-500 text-sm mb-6">{message}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-black text-white rounded-xl font-bold"
+            >
+              새로고침
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (this as any).props.children;
+  }
 }
 
 // --- Types ---
@@ -107,6 +230,16 @@ const getWorkTypeColor = (type: string) => {
 // --- Components ---
 
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
+}
+
+function AppContent() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -119,38 +252,74 @@ export default function App() {
   const [searchStartDate, setSearchStartDate] = useState('');
   const [searchEndDate, setSearchEndDate] = useState('');
 
-  // Load data
+  // Auth state listener
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setWorkLogs(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse logs', e);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setIsAuthReady(true);
+      if (!user) {
+        setIsAuthenticated(false);
       }
-    }
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Save data
+  // Load data from Firestore
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(workLogs));
-  }, [workLogs]);
+    if (!isAuthReady || !user || !isAuthenticated) {
+      setWorkLogs([]);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'workLogs'),
+      where('userId', '==', user.uid),
+      orderBy('date', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const logs: WorkLog[] = [];
+      snapshot.forEach((doc) => {
+        logs.push({ id: doc.id, ...doc.data() } as WorkLog);
+      });
+      setWorkLogs(logs);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'workLogs');
+    });
+
+    return () => unsubscribe();
+  }, [isAuthReady, user, isAuthenticated]);
 
   // --- Handlers ---
-  const handleAddLogs = (logs: Omit<WorkLog, 'id' | 'createdAt'>[]) => {
-    const newLogs: WorkLog[] = logs.map(log => ({
-      ...log,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    }));
-    setWorkLogs(prev => [...prev, ...newLogs]);
-    setIsFormOpen(false);
+  const handleAddLogs = async (logs: Omit<WorkLog, 'id' | 'createdAt'>[]) => {
+    if (!user) return;
+
+    try {
+      const batch = writeBatch(db);
+      logs.forEach(log => {
+        const newDocRef = doc(collection(db, 'workLogs'));
+        batch.set(newDocRef, {
+          ...log,
+          userId: user.uid,
+          createdAt: new Date().toISOString(),
+        });
+      });
+      await batch.commit();
+      setIsFormOpen(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'workLogs');
+    }
   };
 
-  const handleUpdateLog = (id: string, updatedFields: Partial<WorkLog>) => {
-    setWorkLogs(prev => prev.map(log => log.id === id ? { ...log, ...updatedFields } : log));
-    setEditingLog(null);
-    setIsFormOpen(false);
+  const handleUpdateLog = async (id: string, updatedFields: Partial<WorkLog>) => {
+    try {
+      const logRef = doc(db, 'workLogs', id);
+      await updateDoc(logRef, updatedFields);
+      setEditingLog(null);
+      setIsFormOpen(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `workLogs/${id}`);
+    }
   };
 
   const handleNavigateToLog = (log: WorkLog) => {
@@ -164,9 +333,13 @@ export default function App() {
     setSearchEndDate('');
   };
 
-  const handleDeleteLog = (id: string) => {
+  const handleDeleteLog = async (id: string) => {
     if (confirm('정말 삭제하시겠습니까?')) {
-      setWorkLogs(prev => prev.filter(log => log.id !== id));
+      try {
+        await deleteDoc(doc(db, 'workLogs', id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `workLogs/${id}`);
+      }
     }
   };
 
@@ -206,6 +379,14 @@ export default function App() {
       return matchesQuery && matchesStartDate && matchesEndDate;
     }).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20);
   }, [workLogs, searchQuery, searchStartDate, searchEndDate]);
+
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
@@ -442,7 +623,7 @@ export default function App() {
             />
           )}
           {activeTab === 'certificate' && <CertificateView workLogs={workLogs} />}
-          {activeTab === 'settings' && <SettingsView workLogs={workLogs} setWorkLogs={setWorkLogs} />}
+          {activeTab === 'settings' && <SettingsView workLogs={workLogs} setWorkLogs={setWorkLogs} user={user} />}
         </div>
       </main>
 
@@ -1446,7 +1627,7 @@ const SignatureBox: React.FC<SignatureBoxProps> = ({ label }) => {
   );
 }
 
-function SettingsView({ workLogs, setWorkLogs }: { workLogs: WorkLog[], setWorkLogs: (logs: WorkLog[]) => void }) {
+function SettingsView({ workLogs, setWorkLogs, user }: { workLogs: WorkLog[], setWorkLogs: (logs: WorkLog[]) => void, user: User | null }) {
   const handleExport = () => {
     const data = JSON.stringify({ workLogs, version: '2.0', exportDate: new Date().toISOString() }, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
@@ -1457,16 +1638,26 @@ function SettingsView({ workLogs, setWorkLogs }: { workLogs: WorkLog[], setWorkL
     a.click();
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
         if (data.workLogs && Array.isArray(data.workLogs)) {
-          if (confirm(`${data.workLogs.length}개의 데이터를 불러오시겠습니까? 기존 데이터는 유지됩니다.`)) {
-            setWorkLogs([...workLogs, ...data.workLogs]);
+          if (confirm(`${data.workLogs.length}개의 데이터를 불러오시겠습니까? Firestore에 저장됩니다.`)) {
+            const batch = writeBatch(db);
+            data.workLogs.forEach((log: any) => {
+              const newDocRef = doc(collection(db, 'workLogs'));
+              const { id, ...rest } = log;
+              batch.set(newDocRef, {
+                ...rest,
+                userId: user.uid,
+                createdAt: log.createdAt || new Date().toISOString()
+              });
+            });
+            await batch.commit();
           }
         }
       } catch (err) {
@@ -1476,9 +1667,28 @@ function SettingsView({ workLogs, setWorkLogs }: { workLogs: WorkLog[], setWorkL
     reader.readAsText(file);
   };
 
+  const handleLogout = async () => {
+    if (confirm('로그아웃 하시겠습니까?')) {
+      await signOut(auth);
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="bg-white p-8 rounded-3xl border border-black/5 shadow-sm">
+        <h3 className="text-lg font-bold mb-6">계정 정보</h3>
+        <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-black/5 mb-6">
+          <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName || 'User'}`} className="w-12 h-12 rounded-full border-2 border-white shadow-sm" alt="Profile" />
+          <div className="flex-1">
+            <p className="font-bold">{user?.displayName || '사용자'}</p>
+            <p className="text-xs text-slate-500">{user?.email}</p>
+          </div>
+          <button onClick={handleLogout} className="px-4 py-2 bg-white rounded-xl border border-black/10 text-xs font-bold hover:bg-slate-50 transition-all">
+            로그아웃
+          </button>
+        </div>
+
         <h3 className="text-lg font-bold mb-6">데이터 관리</h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-black/5">
@@ -1508,9 +1718,13 @@ function SettingsView({ workLogs, setWorkLogs }: { workLogs: WorkLog[], setWorkL
               <p className="text-xs text-rose-600/70">모든 기록을 영구적으로 삭제합니다.</p>
             </div>
             <button 
-              onClick={() => {
+              onClick={async () => {
                 if (confirm('정말 모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
-                  setWorkLogs([]);
+                  const batch = writeBatch(db);
+                  workLogs.forEach(log => {
+                    batch.delete(doc(db, 'workLogs', log.id));
+                  });
+                  await batch.commit();
                 }
               }}
               className="p-3 bg-white rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
@@ -1545,6 +1759,19 @@ function SettingsView({ workLogs, setWorkLogs }: { workLogs: WorkLog[], setWorkL
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      onLogin();
+    } catch (err) {
+      console.error('Login failed', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1570,45 +1797,60 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
               <Lock className="text-white" size={32} />
             </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-900">시스템 접속</h1>
-            <p className="text-slate-500 mt-2 font-medium">관리자 비밀번호를 입력해주세요.</p>
+            <p className="text-slate-500 mt-2 font-medium">관리자 비밀번호 또는 구글 로그인</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <div className="relative">
-                <motion.input
-                  animate={error ? { x: [-10, 10, -10, 10, 0] } : {}}
-                  transition={{ duration: 0.4 }}
-                  type="password"
-                  value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                  placeholder="비밀번호 입력"
-                  className={cn(
-                    "w-full bg-slate-50 border-2 px-6 py-5 rounded-2xl outline-none transition-all text-xl font-bold tracking-widest text-center",
-                    error ? "border-rose-500" : "border-slate-100 focus:border-slate-900"
-                  )}
-                  autoFocus
-                />
-                {error && (
-                  <motion.p 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-rose-500 text-xs font-bold text-center mt-2 uppercase tracking-wider"
-                  >
-                    잘못된 비밀번호입니다
-                  </motion.p>
-                )}
+          <div className="space-y-6">
+            <button 
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl font-bold hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
+              <span>Google 계정으로 시작하기</span>
+            </button>
+
+            <div className="relative flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-100"></div>
               </div>
+              <span className="relative px-4 bg-white text-[10px] font-bold text-slate-400 uppercase tracking-widest">또는</span>
             </div>
 
-            <button
-              type="submit"
-              className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-lg shadow-xl hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-            >
-              <LogIn size={20} />
-              접속하기
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <div className="relative">
+                  <motion.input
+                    animate={error ? { x: [-10, 10, -10, 10, 0] } : {}}
+                    transition={{ duration: 0.4 }}
+                    type="password"
+                    value={password}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                    placeholder="비밀번호 입력"
+                    className={cn(
+                      "w-full bg-slate-50 border-2 px-6 py-4 rounded-2xl outline-none transition-all text-xl font-bold tracking-widest text-center",
+                      error ? "border-rose-500" : "border-slate-100 focus:border-slate-900"
+                    )}
+                  />
+                  {error && (
+                    <motion.p 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-rose-500 text-[10px] font-bold text-center mt-2 uppercase tracking-wider"
+                    >
+                      잘못된 비밀번호입니다
+                    </motion.p>
+                  )}
+                </div>
+              </div>
+              <button 
+                type="submit"
+                className="w-full bg-slate-900 text-white px-6 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+              >
+                비밀번호로 접속
+              </button>
+            </form>
+          </div>
 
           <div className="mt-10 pt-8 border-t border-slate-100 text-center">
             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">

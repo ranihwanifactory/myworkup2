@@ -2,42 +2,46 @@
   "entities": {
     "WorkLog": {
       "title": "WorkLog",
-      "description": "업무일지 기록",
+      "description": "일일 인력 배치 및 수수료 기록",
       "type": "object",
       "properties": {
         "id": { "type": "string", "description": "문서 ID" },
-        "date": { "type": "string", "format": "date", "description": "날짜 (YYYY-MM-DD)" },
-        "title": { "type": "string", "description": "제목" },
-        "content": { "type": "string", "description": "내용" },
-        "author": { "type": "string", "description": "작성자 이름" },
-        "authorEmail": { "type": "string", "format": "email", "description": "작성자 이메일" },
-        "createdAt": { "type": "string", "format": "date-time", "description": "생성 일시" },
-        "updatedAt": { "type": "string", "format": "date-time", "description": "수정 일시" }
+        "userId": { "type": "string", "description": "소유자 UID" },
+        "date": { "type": "string", "format": "date", "description": "작업 날짜 (YYYY-MM-DD)" },
+        "workType": { "type": "string", "description": "현장명/업무 종류" },
+        "unitPrice": { "type": "number", "description": "단가" },
+        "workerCount": { "type": "number", "description": "인원수" },
+        "totalAmount": { "type": "number", "description": "총액" },
+        "commissionRate": { "type": "number", "description": "수수료율 (%)" },
+        "commission": { "type": "number", "description": "수수료 금액" },
+        "workerNames": { "type": "string", "description": "투입 인원 명단" },
+        "notes": { "type": "string", "description": "비고/메모" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "생성 일시" }
       },
-      "required": ["date", "title", "content", "authorEmail"]
+      "required": ["userId", "date", "workType", "unitPrice", "workerCount", "totalAmount", "commissionRate", "commission", "createdAt"]
     },
-    "User": {
-      "title": "User",
-      "description": "사용자 프로필",
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "사용자 프로필 정보",
       "type": "object",
       "properties": {
-        "uid": { "type": "string", "description": "사용자 UID" },
-        "email": { "type": "string", "format": "email", "description": "이메일" },
-        "displayName": { "type": "string", "description": "이름" },
-        "photoURL": { "type": "string", "description": "프로필 사진 URL" },
-        "role": { "type": "string", "enum": ["admin", "user"], "description": "권한" }
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] }
       },
       "required": ["uid", "email", "role"]
     }
   },
   "firestore": {
-    "/worklogs": {
+    "/workLogs/{logId}": {
       "schema": "WorkLog",
-      "description": "업무일지 컬렉션"
+      "description": "업무 일지 컬렉션"
     },
-    "/users": {
-      "schema": "User",
-      "description": "사용자 컬렉션"
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "사용자 정보 컬렉션"
     }
   }
 }
