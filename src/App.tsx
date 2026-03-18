@@ -24,7 +24,9 @@ import {
   AlertCircle,
   FileText,
   Printer,
-  Eraser
+  Eraser,
+  Lock,
+  LogIn
 } from 'lucide-react';
 import { 
   format, 
@@ -104,6 +106,7 @@ const getWorkTypeColor = (type: string) => {
 // --- Components ---
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState<'calendar' | 'dashboard' | 'logs' | 'certificate' | 'settings'>('calendar');
@@ -168,6 +171,10 @@ export default function App() {
       totalAmount: monthLogs.reduce((sum, log) => sum + log.totalAmount, 0),
     };
   }, [workLogs, currentDate]);
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F4] text-[#141414] font-sans">
@@ -1382,6 +1389,85 @@ function SettingsView({ workLogs, setWorkLogs }: { workLogs: WorkLog[], setWorkL
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LoginScreen({ onLogin }: { onLogin: () => void }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === '0615') {
+      onLogin();
+    } else {
+      setError(true);
+      setPassword('');
+      setTimeout(() => setError(false), 2000);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 font-sans">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md"
+      >
+        <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl border border-white/10">
+          <div className="text-center mb-10">
+            <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+              <Lock className="text-white" size={32} />
+            </div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">시스템 접속</h1>
+            <p className="text-slate-500 mt-2 font-medium">관리자 비밀번호를 입력해주세요.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <div className="relative">
+                <motion.input
+                  animate={error ? { x: [-10, 10, -10, 10, 0] } : {}}
+                  transition={{ duration: 0.4 }}
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="비밀번호 입력"
+                  className={cn(
+                    "w-full bg-slate-50 border-2 px-6 py-5 rounded-2xl outline-none transition-all text-xl font-bold tracking-widest text-center",
+                    error ? "border-rose-500" : "border-slate-100 focus:border-slate-900"
+                  )}
+                  autoFocus
+                />
+                {error && (
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-rose-500 text-xs font-bold text-center mt-2 uppercase tracking-wider"
+                  >
+                    잘못된 비밀번호입니다
+                  </motion.p>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-lg shadow-xl hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+            >
+              <LogIn size={20} />
+              접속하기
+            </button>
+          </form>
+
+          <div className="mt-10 pt-8 border-t border-slate-100 text-center">
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">
+              인력 업무 관리 시스템 v2.1
+            </p>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
