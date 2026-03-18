@@ -1,5 +1,5 @@
 {
-  "name": "인력 업무일지",
-  "description": "인력사무소 업무 일지 및 수수료 관리 시스템",
+  "name": "젊은인력 업무일지 달력",
+  "description": "Google 계정(acehwan69@gmail.com)을 관리자로 사용하는 업무일지 달력 애플리케이션입니다. JSON 데이터를 자동으로 데이터베이스에 기록합니다.",
   "requestFramePermissions": []
 }
