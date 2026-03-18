@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo, useRef, Component } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Calendar as CalendarIcon, 
   LayoutDashboard, 
@@ -65,6 +65,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
+import { handleFirestoreError, OperationType } from './utils/firestore';
 import { 
   db, 
   auth, 
@@ -92,107 +93,6 @@ import {
 // --- Utilities ---
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
-}
-
-// --- Error Handling ---
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId: string | undefined;
-    email: string | null | undefined;
-    emailVerified: boolean | undefined;
-    isAnonymous: boolean | undefined;
-    tenantId: string | null | undefined;
-    providerInfo: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
-  }
-}
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
-    operationType,
-    path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
-
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: any;
-}
-
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false, error: null };
-
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true, error };
-  }
-
-  render() {
-    const { hasError, error } = this.state;
-    if (hasError) {
-      let message = "문제가 발생했습니다.";
-      try {
-        const parsed = JSON.parse(error.message);
-        if (parsed.error.includes('insufficient permissions')) {
-          message = "권한이 없습니다. 관리자에게 문의하세요.";
-        }
-      } catch (e) {
-        message = error.message || message;
-      }
-      return (
-        <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
-          <div className="bg-white p-8 rounded-3xl shadow-xl border border-black/5 text-center max-w-md">
-            <AlertCircle size={48} className="text-rose-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">오류 발생</h2>
-            <p className="text-slate-500 text-sm mb-6">{message}</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-black text-white rounded-xl font-bold"
-            >
-              새로고침
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (this as any).props.children;
-  }
 }
 
 // --- Types ---
@@ -231,14 +131,6 @@ const getWorkTypeColor = (type: string) => {
 // --- Components ---
 
 export default function App() {
-  return (
-    <ErrorBoundary>
-      <AppContent />
-    </ErrorBoundary>
-  );
-}
-
-function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
