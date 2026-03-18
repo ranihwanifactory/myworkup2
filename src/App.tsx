@@ -662,9 +662,18 @@ function CalendarHeader({ currentDate, onPrev, onNext, onToday }: { currentDate:
       <div className="flex items-center gap-2 print:hidden">
         <button 
           onClick={() => {
-            document.body.classList.add('print-landscape');
-            window.print();
-            document.body.classList.remove('print-landscape');
+            const style = document.createElement('style');
+            style.id = 'print-landscape-style';
+            style.innerHTML = '@page { size: landscape !important; margin: 1cm !important; }';
+            document.head.appendChild(style);
+            document.body.classList.add('is-printing-landscape');
+            
+            setTimeout(() => {
+              window.print();
+              const styleToRemove = document.getElementById('print-landscape-style');
+              if (styleToRemove) document.head.removeChild(styleToRemove);
+              document.body.classList.remove('is-printing-landscape');
+            }, 50);
           }}
           className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-black mr-2"
           title="달력 인쇄"
