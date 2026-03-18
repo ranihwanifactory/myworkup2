@@ -27,85 +27,70 @@
 
 @media print {
   @page {
-    margin: 0;
+    margin: 1cm;
     size: auto;
   }
 
-  html, body {
-    height: auto !important;
-    overflow: visible !important;
-    background: white !important;
-    margin: 0 !important;
-    padding: 0 !important;
+  /* Hide everything by default */
+  body * {
+    visibility: hidden !important;
   }
 
-  body {
-    margin: 1cm !important;
+  /* Show only the main content and its children */
+  main, main * {
+    visibility: visible !important;
   }
-  
+
+  /* Ensure main content is positioned correctly */
+  main {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    visibility: visible !important;
+  }
+
+  /* Hide non-print elements explicitly */
   nav, aside, header, footer, .print-hidden, button, .pb-24, .lg\:col-span-4 {
     display: none !important;
-  }
-  
-  main {
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-    display: block !important;
-    position: static !important;
-    padding-left: 0 !important;
+    visibility: hidden !important;
   }
 
   /* Reset layout for print */
   .md\:pl-20, .md\:pl-64 {
     padding-left: 0 !important;
   }
-  
+
   .lg\:col-span-8 {
     width: 100% !important;
     max-width: none !important;
     display: block !important;
     border: none !important;
     box-shadow: none !important;
-    overflow: visible !important;
-    float: none !important;
     padding: 0 !important;
     margin: 0 !important;
-  }
-
-  /* Force visibility for calendar elements */
-  .lg\:col-span-8, .lg\:col-span-8 * {
-    visibility: visible !important;
     opacity: 1 !important;
-    display: block !important;
+    transform: none !important;
   }
 
-  /* Re-enable grid for the actual calendar grid */
-  .lg\:col-span-8 .grid {
+  /* Ensure the calendar grid still uses grid layout */
+  .grid {
     display: grid !important;
-  }
-  
-  .bg-white {
-    box-shadow: none !important;
-    border: none !important;
-  }
-  
-  .min-h-screen {
-    min-height: auto !important;
-  }
-  
-  .certificate-container {
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    width: 100% !important;
-    max-width: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 
-  /* Force background colors to show in print */
+  /* Force background colors and colors to show */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
+  }
+
+  /* Specific fixes for calendar cells */
+  .border-r, .border-b {
+    border-color: #e2e8f0 !important; /* slate-200 */
   }
 }
