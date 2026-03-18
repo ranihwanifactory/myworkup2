@@ -58,6 +58,12 @@
     min-height: auto !important;
   }
 
+  main, main * {
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
   /* Reset layout for print */
   .md\:pl-20, .md\:pl-64 {
     padding-left: 0 !important;
@@ -116,6 +122,21 @@
   /* Specific fixes for calendar cells */
   .border-r, .border-b {
     border-color: #e2e8f0 !important; /* slate-200 */
+  }
+
+  /* Logs Table Print Styles */
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  .print-table th, .print-table td {
+    border: 1px solid #e2e8f0 !important;
+    padding: 8px !important;
+    font-size: 9pt !important;
+  }
+  .print-table th {
+    background-color: #f8fafc !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
   /* Adjust calendar grid for landscape to fill page vertically */

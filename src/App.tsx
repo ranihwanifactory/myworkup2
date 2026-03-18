@@ -1205,17 +1205,28 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
 
   return (
     <div className="bg-white rounded-3xl border border-black/5 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="p-4 md:p-6 border-b border-black/5 flex items-center justify-between print:hidden">
+        <h3 className="font-bold text-lg">전체 업무 일지</h3>
+        <button 
+          onClick={() => window.print()}
+          className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500 hover:text-black flex items-center gap-2"
+          title="일지 인쇄"
+        >
+          <Printer size={20} />
+          <span className="text-sm font-medium">인쇄</span>
+        </button>
+      </div>
       {/* Desktop Table View */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+      <div className="hidden md:block overflow-x-auto print:block">
+        <table className="w-full text-left border-collapse print-table">
           <thead>
-            <tr className="bg-slate-50 border-b border-black/5">
+            <tr className="bg-slate-50 border-b border-black/5 print:bg-white">
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">날짜</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">업무 종류</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">인원</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">수수료</th>
               <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">투입 인력</th>
-              <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">관리</th>
+              <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right print:hidden">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-black/5">
@@ -1229,8 +1240,8 @@ function LogsTable({ workLogs, onEdit, onDelete }: { workLogs: WorkLog[], onEdit
                 </td>
                 <td className="px-6 py-4 text-sm text-right font-medium">{log.workerCount}명</td>
                 <td className="px-6 py-4 text-sm text-right font-bold text-emerald-600">{log.commission.toLocaleString()}원</td>
-                <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate">{log.workerNames || '-'}</td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate print:whitespace-normal">{log.workerNames || '-'}</td>
+                <td className="px-6 py-4 text-right print:hidden">
                   <div className="flex items-center justify-end gap-1">
                     <button onClick={() => onEdit(log)} className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-blue-600 transition-all">
                       <Edit2 size={16} />
