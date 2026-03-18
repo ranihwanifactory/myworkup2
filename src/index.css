@@ -118,8 +118,26 @@
     border-color: #e2e8f0 !important; /* slate-200 */
   }
 
-  /* Adjust calendar grid for landscape */
+  /* Adjust calendar grid for landscape to fill page vertically */
+  .lg\:col-span-8 {
+    height: 185mm !important; /* Fill A4 landscape height (210mm - 20mm margins) */
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .lg\:col-span-8 > div:first-child {
+    flex-shrink: 0 !important;
+  }
+
+  .lg\:col-span-8 .grid {
+    flex-grow: 1 !important;
+    grid-template-rows: auto !important; /* Header row (Sun-Sat) */
+    grid-auto-rows: 1fr !important; /* All week rows fill remaining space */
+    height: 100% !important;
+  }
+
   .min-h-\[80px\], .md\:min-h-\[120px\] {
-    min-height: 12vh !important; /* Scale height to fit landscape page better */
+    min-height: 0 !important; /* Let 1fr handle the height */
+    height: 100% !important;
   }
 }
