@@ -31,6 +31,12 @@
     margin: 1cm;
   }
 
+  body.print-landscape {
+    @page {
+      size: A4 landscape;
+    }
+  }
+
   html, body {
     height: auto !important;
     overflow: visible !important;
@@ -144,6 +150,10 @@
     height: 270mm !important; /* Fill A4 portrait height (297mm - 20mm margins) */
     display: flex !important;
     flex-direction: column !important;
+  }
+
+  body.print-landscape .lg\:col-span-8 {
+    height: 185mm !important; /* Fill A4 landscape height (210mm - 20mm margins) */
   }
 
   /* Adjust logs table to fill page vertically if it's the main content */

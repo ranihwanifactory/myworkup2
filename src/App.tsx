@@ -661,7 +661,11 @@ function CalendarHeader({ currentDate, onPrev, onNext, onToday }: { currentDate:
       </div>
       <div className="flex items-center gap-2 print:hidden">
         <button 
-          onClick={() => window.print()}
+          onClick={() => {
+            document.body.classList.add('print-landscape');
+            window.print();
+            document.body.classList.remove('print-landscape');
+          }}
           className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-black mr-2"
           title="달력 인쇄"
         >
