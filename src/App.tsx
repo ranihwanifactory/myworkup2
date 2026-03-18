@@ -643,7 +643,7 @@ function LoadingOverlay({ progress, elapsedTime, isImporting }: { progress: numb
 
 function CalendarHeader({ currentDate, onPrev, onNext, onToday }: { currentDate: Date, onPrev: () => void, onNext: () => void, onToday: () => void }) {
   return (
-    <div className="p-4 md:p-6 border-bottom border-black/5 flex items-center justify-between print:justify-center print:border-0 print:pb-2">
+    <div className="p-4 md:p-6 border-b border-black/5 flex items-center justify-between print:justify-center print:border-0 print:pb-2">
       <div className="flex items-center gap-4">
         <h2 className="text-xl font-bold print:text-2xl print:tracking-tight">
           {format(currentDate, 'yyyy년 MM월', { locale: ko })}

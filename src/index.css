@@ -26,32 +26,45 @@
 }
 
 @media print {
-  nav, header, .print-hidden, button, .md\:pl-20, .pb-24 {
-    display: none !important;
+  @page {
+    margin: 0;
+    size: auto;
   }
-  
-  body, html {
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
   }
 
+  body {
+    margin: 1.5cm !important; /* Content margin from paper edge */
+  }
+  
+  nav, header, .print-hidden, button, .pb-24, .lg\:col-span-4, .lg\:grid-cols-12 > div:not(.lg\:col-span-8) {
+    display: none !important;
+  }
+  
   main {
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  /* Reset layout for print */
+  .md\:pl-20 {
+    padding-left: 0 !important;
   }
   
   .lg\:col-span-8 {
     grid-column: span 12 / span 12 !important;
     width: 100% !important;
-  }
-  
-  .lg\:col-span-4, .lg\:grid-cols-12 > div:not(.lg\:col-span-8) {
-    display: none !important;
+    display: block !important;
+    float: none !important;
   }
   
   .bg-white {
@@ -76,9 +89,10 @@
     display: grid !important;
   }
 
-  /* Force background colors to show in print (some browsers support this) */
+  /* Force background colors to show in print */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 }
