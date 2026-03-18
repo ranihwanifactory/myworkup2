@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 
 // Import the Firebase configuration
@@ -29,5 +29,5 @@ async function testConnection() {
 
 testConnection();
 
-export { signInWithPopup, signOut, onAuthStateChanged };
+export { signInWithPopup, signInAnonymously, signOut, onAuthStateChanged };
 export type { User };

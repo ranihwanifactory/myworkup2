@@ -70,6 +70,7 @@ import {
   auth, 
   googleProvider, 
   signInWithPopup, 
+  signInAnonymously,
   signOut, 
   onAuthStateChanged,
   User
@@ -257,7 +258,9 @@ function AppContent() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setIsAuthReady(true);
-      if (!user) {
+      if (user) {
+        setIsAuthenticated(true);
+      } else {
         setIsAuthenticated(false);
       }
     });
@@ -1773,10 +1776,19 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password === '0615') {
-      onLogin();
+      setIsLoading(true);
+      try {
+        await signInAnonymously(auth);
+        onLogin();
+      } catch (err) {
+        console.error('Anonymous login failed', err);
+        setError(true);
+      } finally {
+        setIsLoading(false);
+      }
     } else {
       setError(true);
       setPassword('');
@@ -1845,9 +1857,10 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
               </div>
               <button 
                 type="submit"
-                className="w-full bg-slate-900 text-white px-6 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                disabled={isLoading}
+                className="w-full bg-slate-900 text-white px-6 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50"
               >
-                비밀번호로 접속
+                {isLoading ? '접속 중...' : '비밀번호로 접속'}
               </button>
             </form>
           </div>
